@@ -36,9 +36,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ snake, food, isSpectator = false 
       {snake.map((segment, index) => (
         <div
           key={index}
-          className={`absolute rounded-sm transition-all duration-75 ${
-            index === 0 ? 'glow-green' : ''
-          }`}
+          className={`absolute rounded-sm ${index === 0 ? 'glow-green' : ''}`}
           style={{
             left: segment.x * CELL_SIZE,
             top: segment.y * CELL_SIZE,
