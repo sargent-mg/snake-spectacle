@@ -113,30 +113,30 @@ describe('moveSnake', () => {
 
   it('should wrap around in passthrough mode', () => {
     const snakeAtEdge: Position[] = [{ x: 0, y: 0 }];
-    
+
     const { newSnake: leftWrap } = moveSnake(snakeAtEdge, 'LEFT', 'passthrough');
     expect(leftWrap[0].x).toBe(GRID_SIZE - 1);
-    
+
     const { newSnake: upWrap } = moveSnake(snakeAtEdge, 'UP', 'passthrough');
     expect(upWrap[0].y).toBe(GRID_SIZE - 1);
   });
 
   it('should detect wall collision in walls mode', () => {
     const snakeAtEdge: Position[] = [{ x: 0, y: 0 }];
-    
+
     const { hitWall: leftHit } = moveSnake(snakeAtEdge, 'LEFT', 'walls');
     expect(leftHit).toBe(true);
-    
+
     const { hitWall: upHit } = moveSnake(snakeAtEdge, 'UP', 'walls');
     expect(upHit).toBe(true);
   });
 
   it('should not hit wall when moving away from edge', () => {
     const snakeAtEdge: Position[] = [{ x: 0, y: 0 }];
-    
+
     const { hitWall: rightHit } = moveSnake(snakeAtEdge, 'RIGHT', 'walls');
     expect(rightHit).toBe(false);
-    
+
     const { hitWall: downHit } = moveSnake(snakeAtEdge, 'DOWN', 'walls');
     expect(downHit).toBe(false);
   });
@@ -267,7 +267,7 @@ describe('gameStep', () => {
       { x: 9, y: 9 },
       { x: 9, y: 10 },
     ];
-    state.direction = 'LEFT';
+    state.direction = 'UP';
     const newState = gameStep(state);
     expect(newState.isGameOver).toBe(true);
   });
