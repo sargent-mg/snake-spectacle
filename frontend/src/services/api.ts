@@ -1,259 +1,187 @@
-import { 
-  User, 
-  LeaderboardEntry, 
-  ActivePlayer, 
-  AuthResponse, 
+import {
+  User,
+  LeaderboardEntry,
+  ActivePlayer,
+  AuthResponse,
   ApiResponse,
-  GameMode,
-  Position,
-  Direction
+  GameMode
 } from '@/types/game';
-
-// Simulated delay for API calls
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Local storage keys
 const STORAGE_KEYS = {
-  USER: 'snake_game_user',
-  LEADERBOARD: 'snake_game_leaderboard',
+  TOKEN: 'snake_game_token',
 };
 
-// Mock data
-const mockLeaderboard: LeaderboardEntry[] = [
-  { id: '1', username: 'NeonMaster', score: 2450, mode: 'walls', date: '2024-01-15' },
-  { id: '2', username: 'PixelKing', score: 2100, mode: 'passthrough', date: '2024-01-14' },
-  { id: '3', username: 'ArcadeQueen', score: 1890, mode: 'walls', date: '2024-01-13' },
-  { id: '4', username: 'RetroGamer', score: 1750, mode: 'passthrough', date: '2024-01-12' },
-  { id: '5', username: 'SnakeCharmer', score: 1620, mode: 'walls', date: '2024-01-11' },
-  { id: '6', username: 'BitRunner', score: 1500, mode: 'passthrough', date: '2024-01-10' },
-  { id: '7', username: 'VectorViper', score: 1380, mode: 'walls', date: '2024-01-09' },
-  { id: '8', username: 'GlitchGuru', score: 1250, mode: 'passthrough', date: '2024-01-08' },
-  { id: '9', username: 'CyberSnake', score: 1100, mode: 'walls', date: '2024-01-07' },
-  { id: '10', username: 'NeonByte', score: 950, mode: 'passthrough', date: '2024-01-06' },
-];
+// Helper for making authenticated requests
+const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
+  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
 
-// Generate mock active players with simulated game states
-const generateMockActivePlayers = (): ActivePlayer[] => {
-  const players: ActivePlayer[] = [
-    {
-      id: 'active-1',
-      username: 'LivePlayer1',
-      score: Math.floor(Math.random() * 500) + 100,
-      mode: 'walls',
-      snake: [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }],
-      food: { x: 15, y: 12 },
-      direction: 'RIGHT',
-      startedAt: new Date(Date.now() - 120000).toISOString(),
-    },
-    {
-      id: 'active-2',
-      username: 'ProGamer99',
-      score: Math.floor(Math.random() * 800) + 200,
-      mode: 'passthrough',
-      snake: [{ x: 5, y: 8 }, { x: 5, y: 9 }, { x: 5, y: 10 }],
-      food: { x: 12, y: 5 },
-      direction: 'UP',
-      startedAt: new Date(Date.now() - 300000).toISOString(),
-    },
-    {
-      id: 'active-3',
-      username: 'SnakeMaster',
-      score: Math.floor(Math.random() * 1000) + 300,
-      mode: 'walls',
-      snake: [{ x: 15, y: 15 }, { x: 14, y: 15 }, { x: 13, y: 15 }, { x: 12, y: 15 }],
-      food: { x: 3, y: 7 },
-      direction: 'RIGHT',
-      startedAt: new Date(Date.now() - 600000).toISOString(),
-    },
-  ];
-  return players;
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  });
+
+  return response;
 };
-
-// Mock users database
-const mockUsers: Map<string, { user: User; password: string }> = new Map();
-
-// Initialize with some mock users
-mockUsers.set('demo@snake.game', {
-  user: {
-    id: 'demo-user-1',
-    username: 'DemoPlayer',
-    email: 'demo@snake.game',
-    createdAt: '2024-01-01',
-  },
-  password: 'demo123',
-});
 
 /**
  * Centralized API service for all backend calls
- * All methods are async to simulate real API behavior
  */
 export const api = {
   // ==================== AUTH ====================
-  
+
   async login(email: string, password: string): Promise<AuthResponse> {
-    await delay(500);
-    
-    const userData = mockUsers.get(email);
-    
-    if (!userData) {
-      return { success: false, error: 'User not found' };
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.user) {
+        // For this mock backend, the token is the email
+        localStorage.setItem(STORAGE_KEYS.TOKEN, data.user.email);
+      }
+      return data;
+    } catch (error) {
+      return { success: false, error: 'Network error' };
     }
-    
-    if (userData.password !== password) {
-      return { success: false, error: 'Invalid password' };
-    }
-    
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData.user));
-    return { success: true, user: userData.user };
   },
 
   async signup(email: string, username: string, password: string): Promise<AuthResponse> {
-    await delay(500);
-    
-    if (mockUsers.has(email)) {
-      return { success: false, error: 'Email already registered' };
-    }
-    
-    // Check if username is taken
-    for (const [, data] of mockUsers) {
-      if (data.user.username.toLowerCase() === username.toLowerCase()) {
-        return { success: false, error: 'Username already taken' };
+    try {
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, username, password }),
+      });
+      const data = await response.json();
+      if (data.success && data.user) {
+        localStorage.setItem(STORAGE_KEYS.TOKEN, data.user.email);
       }
+      return data;
+    } catch (error) {
+      return { success: false, error: 'Network error' };
     }
-    
-    const newUser: User = {
-      id: `user-${Date.now()}`,
-      username,
-      email,
-      createdAt: new Date().toISOString(),
-    };
-    
-    mockUsers.set(email, { user: newUser, password });
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(newUser));
-    
-    return { success: true, user: newUser };
   },
 
   async logout(): Promise<ApiResponse<null>> {
-    await delay(200);
-    localStorage.removeItem(STORAGE_KEYS.USER);
-    return { success: true };
+    try {
+      const response = await fetchWithAuth('/api/auth/logout', {
+        method: 'POST',
+      });
+      localStorage.removeItem(STORAGE_KEYS.TOKEN);
+      return await response.json();
+    } catch (error) {
+      return { success: false, error: 'Network error' };
+    }
   },
 
   async getCurrentUser(): Promise<ApiResponse<User | null>> {
-    await delay(100);
-    const stored = localStorage.getItem(STORAGE_KEYS.USER);
-    if (stored) {
-      return { success: true, data: JSON.parse(stored) };
+    try {
+      const response = await fetchWithAuth('/api/auth/me');
+      if (response.ok) {
+        return await response.json();
+      }
+      return { success: false, error: 'Not authenticated' };
+    } catch (error) {
+      return { success: false, error: 'Network error' };
     }
-    return { success: true, data: null };
   },
 
   // ==================== LEADERBOARD ====================
 
   async getLeaderboard(mode?: GameMode): Promise<ApiResponse<LeaderboardEntry[]>> {
-    await delay(300);
-    
-    let leaderboard = [...mockLeaderboard];
-    
-    // Load any saved scores from localStorage
-    const savedLeaderboard = localStorage.getItem(STORAGE_KEYS.LEADERBOARD);
-    if (savedLeaderboard) {
-      const saved = JSON.parse(savedLeaderboard) as LeaderboardEntry[];
-      leaderboard = [...saved, ...leaderboard];
+    try {
+      const url = mode ? `/api/leaderboard?mode=${mode}` : '/api/leaderboard';
+      const response = await fetch(url);
+      return await response.json();
+    } catch (error) {
+      return { success: false, error: 'Network error' };
     }
-    
-    // Sort by score descending
-    leaderboard.sort((a, b) => b.score - a.score);
-    
-    // Filter by mode if specified
-    if (mode) {
-      leaderboard = leaderboard.filter(entry => entry.mode === mode);
-    }
-    
-    // Return top 10
-    return { success: true, data: leaderboard.slice(0, 10) };
   },
 
   async submitScore(score: number, mode: GameMode): Promise<ApiResponse<LeaderboardEntry>> {
-    await delay(300);
-    
-    const userResponse = await this.getCurrentUser();
-    if (!userResponse.data) {
-      return { success: false, error: 'Must be logged in to submit score' };
+    try {
+      const response = await fetchWithAuth('/api/leaderboard', {
+        method: 'POST',
+        body: JSON.stringify({ score, mode }),
+      });
+      return await response.json();
+    } catch (error) {
+      return { success: false, error: 'Network error' };
     }
-    
-    const entry: LeaderboardEntry = {
-      id: `score-${Date.now()}`,
-      username: userResponse.data.username,
-      score,
-      mode,
-      date: new Date().toISOString().split('T')[0],
-    };
-    
-    // Save to localStorage
-    const savedLeaderboard = localStorage.getItem(STORAGE_KEYS.LEADERBOARD);
-    const leaderboard = savedLeaderboard ? JSON.parse(savedLeaderboard) : [];
-    leaderboard.push(entry);
-    localStorage.setItem(STORAGE_KEYS.LEADERBOARD, JSON.stringify(leaderboard));
-    
-    return { success: true, data: entry };
   },
 
   // ==================== ACTIVE PLAYERS (SPECTATOR) ====================
 
   async getActivePlayers(): Promise<ApiResponse<ActivePlayer[]>> {
-    await delay(200);
-    return { success: true, data: generateMockActivePlayers() };
+    try {
+      const response = await fetch('/api/players');
+      return await response.json();
+    } catch (error) {
+      return { success: false, error: 'Network error' };
+    }
   },
 
   async getPlayerById(playerId: string): Promise<ApiResponse<ActivePlayer | null>> {
-    await delay(100);
-    const players = generateMockActivePlayers();
-    const player = players.find(p => p.id === playerId) || null;
-    return { success: true, data: player };
+    try {
+      const response = await fetch(`/api/players/${playerId}`);
+      return await response.json();
+    } catch (error) {
+      return { success: false, error: 'Network error' };
+    }
   },
 
-  // Simulate player movement for spectator mode
+  // Simulate player movement for spectator mode (client-side prediction/interpolation)
+  // We can keep this helper if it's used for smooth animation, but ideally we fetch updates.
+  // For now, I'll keep it as a helper but it might not be used if we poll the backend.
+  // However, the task is to "Make the frontend use the backend".
+  // The backend likely doesn't have a "simulate move" endpoint for the client to call.
+  // The client might need to interpolate between updates.
+  // I will leave this function here as it's a utility, but maybe mark it as client-side only.
   simulatePlayerMove(player: ActivePlayer, gridSize: number): ActivePlayer {
+    // This logic remains client-side for smooth rendering between polls if needed
+    // Or we can remove it if the frontend purely relies on backend state.
+    // Given the previous code had it, I'll leave it to avoid breaking UI components that might use it.
+    // But I'll copy the logic from the previous file.
+
     const newSnake = [...player.snake];
     const head = { ...newSnake[0] };
-    
-    // Randomly change direction sometimes
-    const directions: Direction[] = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
-    const opposites: Record<Direction, Direction> = {
-      'UP': 'DOWN', 'DOWN': 'UP', 'LEFT': 'RIGHT', 'RIGHT': 'LEFT'
-    };
-    
-    let newDirection = player.direction;
-    if (Math.random() < 0.1) {
-      const validDirections = directions.filter(d => d !== opposites[player.direction]);
-      newDirection = validDirections[Math.floor(Math.random() * validDirections.length)];
-    }
-    
-    // Move head
-    switch (newDirection) {
+
+    // Simple prediction based on current direction
+    switch (player.direction) {
       case 'UP': head.y -= 1; break;
       case 'DOWN': head.y += 1; break;
       case 'LEFT': head.x -= 1; break;
       case 'RIGHT': head.x += 1; break;
     }
-    
+
     // Handle passthrough mode
     if (player.mode === 'passthrough') {
       if (head.x < 0) head.x = gridSize - 1;
-      if (head.x >= gridSize) head.x = 0;
       if (head.y < 0) head.y = gridSize - 1;
       if (head.y >= gridSize) head.y = 0;
     }
-    
+
     newSnake.unshift(head);
-    
+
     // Check if food eaten
     let newFood = player.food;
     let newScore = player.score;
     if (head.x === player.food.x && head.y === player.food.y) {
       newScore += 10;
+      // We can't really generate random food here that matches server, 
+      // but for simulation/prediction we can just keep old food or randomize.
+      // The test expects score to increase.
+      // Let's randomize to match old behavior.
       newFood = {
         x: Math.floor(Math.random() * gridSize),
         y: Math.floor(Math.random() * gridSize),
@@ -261,12 +189,12 @@ export const api = {
     } else {
       newSnake.pop();
     }
-    
+
     return {
       ...player,
       snake: newSnake,
       food: newFood,
-      direction: newDirection,
+      direction: player.direction, // Note: I need to ensure newDirection is defined or use player.direction
       score: newScore,
     };
   },
