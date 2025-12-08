@@ -14,4 +14,3 @@ databases:
   - name: snake-db
     plan: free
     databaseName: snake_db
-    user: postgres
