@@ -1,21 +1,13 @@
 services:
-  backend:
-    build: ./backend
+  app:
+    build: .
     ports:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:password@db:5432/snake_db
     depends_on:
       - db
-    volumes:
-      - ./backend:/app
-
-  frontend:
-    build: ./frontend
-    ports:
-      - "8080:80"
-    depends_on:
-      - backend
+    # No volumes mapped for app code, ensuring we run the built container
 
   db:
     image: postgres:15-alpine

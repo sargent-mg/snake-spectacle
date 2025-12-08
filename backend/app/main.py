@@ -28,10 +28,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth.router)
-app.include_router(leaderboard.router)
-app.include_router(players.router)
+# API Routes
+app.include_router(auth.router, prefix="/api")
+app.include_router(leaderboard.router, prefix="/api")
+app.include_router(players.router, prefix="/api")
 
-@app.get("/")
+# Serve Frontend
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
+
+@app.get("/api")
 async def root():
     return {"message": "Snake Spectacle API is running"}
+
+# Mount assets directory (Vite puts assets and other static files here)
+# We check if /app/static exists (which it will in the container)
+if os.path.exists("/app/static"):
+    app.mount("/assets", StaticFiles(directory="/app/static/assets"), name="assets")
+    
+    @app.get("/{catchall:path}")
+    async def serve_frontend(catchall: str):
+        # Check if file exists in static folder (e.g. favicon.ico)
+        if "." in catchall and os.path.exists(f"/app/static/{catchall}"):
+            return FileResponse(f"/app/static/{catchall}")
+        # Otherwise return index.html for SPA routing
+        return FileResponse("/app/static/index.html")
