@@ -34,4 +34,4 @@ COPY --from=build-frontend /app/frontend/dist /app/static
 # Run the application
 # We need to set the environment variable to look for static files if we make that configurable,
 # but for now we'll hardcode /app/static in the python code.
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD uv run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
